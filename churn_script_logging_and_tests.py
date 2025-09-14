@@ -2,7 +2,14 @@ import unittest
 import logging
 import os
 import pandas as pd
+from dotenv import load_dotenv
 import churn_library as cls
+
+# Load .env file
+load_dotenv()
+
+# Get data file path from environment variable, with fallback
+DATA_FILE_PATH = os.environ.get('BANK_DATA_PATH', './data/bank_data.csv')
 
 # Create logs directory and configure logging
 os.makedirs('./logs', exist_ok=True)
@@ -17,18 +24,18 @@ class TestEDAPipeline(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures by loading the DataFrame."""
         try:
-            self.df = cls.import_data("./data/bank_data.csv")
+            self.df = cls.import_data(DATA_FILE_PATH)
         except FileNotFoundError as err:
-            logging.error("setUp: Failed to load DataFrame - File not found")
+            logging.error(f"setUp: Failed to load DataFrame from {DATA_FILE_PATH} - File not found")
             raise err
 
     def test_import(self):
         """Test the import_data function."""
         try:
-            df = cls.import_data("./data/bank_data.csv")
+            df = cls.import_data(DATA_FILE_PATH)
             logging.info("Testing import_data: SUCCESS")
         except FileNotFoundError as err:
-            logging.error("Testing import_data: The file wasn't found")
+            logging.error(f"Testing import_data: The file {DATA_FILE_PATH} wasn't found")
             raise err
         try:
             self.assertGreater(df.shape[0], 0, "DataFrame has no rows")
@@ -92,14 +99,14 @@ class TestEDAPipeline(unittest.TestCase):
         except AssertionError as err:
             logging.error(f"Testing perform_eda: Plot file check failed - {str(err)}")
             raise err
-        
+
     @unittest.skip("Not implemented yet")
     def test_encoder_helper(self):
         """Test the encoder_helper function."""
         try:
             # Assume encoder_helper encodes categorical columns into numerical ones
-            category_lst = ['Marital_Status']  # Example categorical column
-            response = 'Churn'  # Response variable
+            category_lst = ['Marital_Status']
+            response = 'Churn'
             encoded_df = cls.encoder_helper(self.df, category_lst, response)
             logging.info("Testing encoder_helper: SUCCESS - Function executed without errors")
         except Exception as err:
@@ -107,7 +114,7 @@ class TestEDAPipeline(unittest.TestCase):
             raise err
 
         try:
-            # Check if encoded columns were added (e.g., Marital_Status_Churn)
+            # Check if encoded columns were added
             for col in category_lst:
                 encoded_col = f"{col}_{response}"
                 self.assertIn(encoded_col, encoded_df.columns, f"Encoded column {encoded_col} not found")
@@ -116,7 +123,7 @@ class TestEDAPipeline(unittest.TestCase):
         except AssertionError as err:
             logging.error(f"Testing encoder_helper: Encoded column check failed - {str(err)}")
             raise err
-	
+
     @unittest.skip("Not implemented yet")
     def test_perform_feature_engineering(self):
         """Test the perform_feature_engineering function."""
@@ -134,21 +141,21 @@ class TestEDAPipeline(unittest.TestCase):
             self.assertGreater(X_test.shape[0], 0, "X_test has no rows")
             self.assertGreater(len(y_train), 0, "y_train has no values")
             self.assertGreater(len(y_test), 0, "y_test has no values")
-            # Check if train/test split sizes are reasonable (e.g., test size ~20%)
+            # Check if train/test split sizes are reasonable
             total_rows = X_train.shape[0] + X_test.shape[0]
             self.assertAlmostEqual(total_rows, self.df.shape[0], msg="Train/test split does not match original DataFrame size")
             logging.info("Testing perform_feature_engineering: Train/test split sizes are valid")
         except AssertionError as err:
             logging.error(f"Testing perform_feature_engineering: Split check failed - {str(err)}")
             raise err
-        
+
     @unittest.skip("Not implemented yet")
     def test_train_models(self):
         """Test the train_models function."""
         try:
             # Assume perform_feature_engineering returns train/test split
             X_train, X_test, y_train, y_test = cls.perform_feature_engineering(self.df)
-            # Assume train_models trains models and saves them
+            # Assume train_models trains and saves models
             cls.train_models(X_train, X_test, y_train, y_test)
             logging.info("Testing train_models: SUCCESS - Function executed without errors")
         except Exception as err:
@@ -156,18 +163,17 @@ class TestEDAPipeline(unittest.TestCase):
             raise err
 
         try:
-            # Check if model output files exist (e.g., pickled models)
+            # Check if model output files exist
             expected_files = [
                 './models/rfc_model.pkl',
                 './models/logistic_model.pkl'
-            ]  # Adjust based on actual model files
+            ]
             for model_file in expected_files:
                 self.assertTrue(os.path.isfile(model_file), f"Model file {model_file} not found")
             logging.info("Testing train_models: Model files created successfully")
         except AssertionError as err:
             logging.error(f"Testing train_models: Model file check failed - {str(err)}")
             raise err
-        pass
 
 if __name__ == '__main__':
     unittest.main()
