@@ -1,0 +1,64 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+*.venv
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter notebook checkpoints and metadata
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Output files from perform_eda
+image/
+eda_test.log
+
+# Data files (comment out if you want to commit data)
+data/
+*.csv
+*.xlsx
+
+# Python build and package files
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store  # macOS
+Thumbs.db  # Windows
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Testing and coverage reports
+.coverage
+coverage.xml
+*.cover
+*.pytest_cache/
+htmlcov/
+
+# Environment and dependency lock files (optional, uncomment if you don't want to commit these)
+# requirements.txt
+# Pipfile.lock
+# .env
+
+# Miscellaneous
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.dll
