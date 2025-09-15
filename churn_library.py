@@ -1,25 +1,30 @@
-# library doc string
-
-
-# import libraries
-from sklearn.metrics import RocCurveDisplay, classification_report
-from sklearn.model_selection import GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import normalize
 import os
-import shap
-import joblib
+import logging
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set()
+import matplotlib.pyplot as plt
+from dotenv import load_dotenv
+
+from sklearn.preprocessing import normalize
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, RocCurveDisplay
 
 
-os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+# Configure logging
+logging.basicConfig(
+    filename='./logs/churn_script.log',
+    level=logging.INFO,
+    filemode='w',
+    format='%(name)s - %(levelname)s - %(message)s'
+)
 
+# Load .env file
+load_dotenv()
+DATA_FILE_PATH = os.environ.get('BANK_DATA_PATH', './data/bank_data.csv')
 
 def import_data(pth):
     '''
@@ -46,15 +51,13 @@ def perform_eda(df):
     # Create image folder if it doesn't exist
     os.makedirs('image', exist_ok=True)
 
-    # Basic EDA
-    df.shape
-    df.isnull().sum()
-    df.describe()
+    # Check if Churn column already exists
+    if 'Churn' in df.columns:
+        raise ValueError("Churn column already exists in DataFrame")
 
     # Create Churn column
     df['Churn'] = df['Attrition_Flag'].apply(
         lambda val: 0 if val == "Existing Customer" else 1)
-
     # Create and save Churn histogram
     plt.figure(figsize=(20, 10))
     df['Churn'].hist()
@@ -92,22 +95,47 @@ def perform_eda(df):
     plt.savefig('image/correlation_heatmap.png')
     plt.close()
 
+    return df
 
-def encoder_helper(df, category_lst, response):
+
+def encoder_helper(df, category_lst, response='Churn'):
     '''
-    helper function to turn each categorical column into a new column with
-    propotion of churn for each category - associated with cell 15 from the notebook
-
+    Helper function to turn each categorical column into a new column with
+    proportion of churn for each category - associated with cell 15 from the notebook
     input:
             df: pandas dataframe
             category_lst: list of columns that contain categorical features
             response: string of response name [optional argument that could be used for naming variables or index y column]
-
     output:
-            df: pandas dataframe with new columns for
+            df: pandas dataframe with new columns for each categorical variable containing the proportion of the response variable (e.g., Churn) for each category
     '''
-    pass
+    try:
+        # Validate response column
+        if response not in df.columns:
+            logging.error(f"encoder_helper: Response column '{response}' not found in DataFrame")
+            raise ValueError(f"Response column '{response}' not found in DataFrame")
 
+        # Validate categorical columns
+        for col in category_lst:
+            if col not in df.columns:
+                logging.error(f"encoder_helper: Categorical column '{col}' not found in DataFrame")
+                raise ValueError(f"Categorical column '{col}' not found in DataFrame")
+
+        # Create new columns with churn proportions
+        for col in category_lst:
+            # Calculate churn proportion for each category
+            churn_rates = df.groupby(col)[response].mean()
+            # Create new column name
+            new_col = f"{col}_{response}"
+            # Map categories to their churn proportions
+            df[new_col] = df[col].map(churn_rates)
+            logging.info(f"encoder_helper: Created column '{new_col}' with churn proportions")
+        
+        return df
+
+    except Exception as err:
+        logging.error(f"encoder_helper: Failed to process categorical columns - {str(err)}")
+        raise err
 
 def perform_feature_engineering(df, response):
     '''
@@ -121,7 +149,24 @@ def perform_feature_engineering(df, response):
               y_train: y training data
               y_test: y testing data
     '''
+    
 
+    keep_cols = ['Customer_Age', 'Dependent_count', 'Months_on_book',
+             'Total_Relationship_Count', 'Months_Inactive_12_mon',
+             'Contacts_Count_12_mon', 'Credit_Limit', 'Total_Revolving_Bal',
+             'Avg_Open_To_Buy', 'Total_Amt_Chng_Q4_Q1', 'Total_Trans_Amt',
+             'Total_Trans_Ct', 'Total_Ct_Chng_Q4_Q1', 'Avg_Utilization_Ratio',
+             'Gender_Churn', 'Education_Level_Churn', 'Marital_Status_Churn', 
+             'Income_Category_Churn', 'Card_Category_Churn']
+
+    X = pd.DataFrame()
+    X[keep_cols] = df[keep_cols]
+    y = df[response]
+
+    # train test split 
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size= 0.3, 
+                                                        random_state=42)
+    return X_train, X_test, y_train, y_test
 
 def classification_report_image(y_train,
                                 y_test,
@@ -175,5 +220,18 @@ def train_models(X_train, X_test, y_train, y_test):
 
 
 if __name__ == "__main__":
-    df = import_data("./data/bank_data.csv")
-    perform_eda(df)
+    df = import_data(DATA_FILE_PATH)
+    df_Churn = perform_eda(df)
+
+    #Categorical columns
+    cat_columns = [
+    'Gender',
+    'Education_Level',
+    'Marital_Status',
+    'Income_Category',
+    'Card_Category']
+
+    df_Cat = encoder_helper(df_Churn, cat_columns, response='Churn')
+    X_train, X_test, y_train, y_test = perform_feature_engineering(df_Cat, 
+                                                                   response='Churn')
+    
