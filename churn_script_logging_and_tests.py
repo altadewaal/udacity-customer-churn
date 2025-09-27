@@ -2,6 +2,9 @@ import unittest
 import logging
 import os
 import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
 from dotenv import load_dotenv
 import churn_library as cls
 
@@ -96,7 +99,7 @@ class TestEDAPipeline(unittest.TestCase):
                 'marital_status_bar.png',
                 'total_trans_ct_histogram.png',
                 'correlation_heatmap.png'
-            ]
+                ]
             # Check if all expected plot files exist in the image folder
             for plot in expected_plots:
                 plot_path = os.path.join('image', plot)
@@ -109,7 +112,9 @@ class TestEDAPipeline(unittest.TestCase):
         # Test case: Ensure perform_eda raises error if Churn column exists
         try:
             # Create a copy with Churn column
-            df_with_churn = self.df.copy()
+           
+
+ df_with_churn = self.df.copy()
             df_with_churn['Churn'] = 1  # Dummy Churn column
             with self.assertRaises(ValueError) as context:
                 cls.perform_eda(df_with_churn)
@@ -257,7 +262,7 @@ class TestEDAPipeline(unittest.TestCase):
 
         # Test case 1: Normal execution
         try:
-            X_train, X_test, y_train, y_test = cls.perform_feature_engineering(df_encoded, response='Churn')
+            X_train, X_test, y_train, y_test, scaler = cls.perform_feature_engineering(df_encoded, response='Churn')
             logging.info("Testing perform_feature_engineering: SUCCESS - Function executed without errors")
             logging.info(f"Testing perform_feature_engineering: X_train columns: {X_train.columns.tolist()}")
         except Exception as err:
@@ -307,6 +312,8 @@ class TestEDAPipeline(unittest.TestCase):
             # Check no missing values in X_train and X_test
             self.assertFalse(X_train.isnull().any().any(), "X_train contains missing values")
             self.assertFalse(X_test.isnull().any().any(), "X_test contains missing values")
+            # Check if scaler is a StandardScaler object
+            self.assertIsInstance(scaler, StandardScaler, "Scaler is not a StandardScaler object")
             logging.info("Testing perform_feature_engineering: Output validated successfully")
         except AssertionError as err:
             logging.error(f"Testing perform_feature_engineering: Validation failed - {str(err)}")
@@ -340,7 +347,6 @@ class TestEDAPipeline(unittest.TestCase):
             logging.error(f"Testing perform_feature_engineering: Failed to raise KeyError for missing keep_cols - {str(err)}")
             raise err
 
-    @unittest.skip("Skipping train_models test to avoid file I/O during testing")
     def test_train_models(self):
         """Test the train_models function."""
         try:
@@ -357,9 +363,9 @@ class TestEDAPipeline(unittest.TestCase):
             df_encoded = cls.encoder_helper(df_eda, cat_columns, response='Churn')
             logging.info(f"Testing train_models: df_encoded columns: {df_encoded.columns.tolist()}")
             # Perform feature engineering
-            X_train, X_test, y_train, y_test = cls.perform_feature_engineering(df_encoded, response='Churn')
+            X_train, X_test, y_train, y_test, scaler = cls.perform_feature_engineering(df_encoded, response='Churn')
             logging.info(f"Testing train_models: X_train columns: {X_train.columns.tolist()}")
-            cls.train_models(X_train, X_test, y_train, y_test)
+            cls.train_models(X_train, X_test, y_train, y_test, scaler)
             logging.info("Testing train_models: SUCCESS - Function executed without errors")
         except Exception as err:
             logging.error(f"Testing train_models: Failed to execute - {str(err)}")
@@ -369,13 +375,139 @@ class TestEDAPipeline(unittest.TestCase):
             expected_files = [
                 './models/rfc_model.pkl',
                 './models/logistic_model.pkl',
-                './image/roc_curve.png'
+                './models/scaler.pkl',
+                './image/log logistic_classification_report.png',
+                './image/random_forest_classification_report.png',
+                './image/roc_curve.png',
+                './image/feature_importance.png',
+                './image/shap_summary_plot.png'
             ]
             for file_path in expected_files:
                 self.assertTrue(os.path.isfile(file_path), f"File {file_path} not found")
             logging.info("Testing train_models: All expected files created successfully")
         except AssertionError as err:
             logging.error(f"Testing train_models: File check failed - {str(err)}")
+            raise err
+
+    def test_classification_report_image(self):
+        """Test the classification_report_image function."""
+        try:
+            # Prepare data for testing
+            df_eda = self.df.copy()
+            if 'Churn' in df_eda.columns:
+                df_eda = df_eda.drop('Churn', axis=1)
+            cls.perform_eda(df_eda)
+            cat_columns = [
+                'Gender', 'Education_Level', 'Marital_Status',
+                'Income_Category', 'Card_Category'
+            ]
+            df_encoded = cls.encoder_helper(df_eda, cat_columns, response='Churn')
+            X_train, X_test, y_train, y_test, scaler = cls.perform_feature_engineering(df_encoded, response='Churn')
+            
+            # Train a simple model to generate predictions
+            model = RandomForestClassifier(random_state=42)
+            model.fit(X_train, y_train)
+            y_train_preds = model.predict(X_train)
+            y_test_preds = model.predict(X_test)
+            y_test_probs = model.predict_proba(X_test)[:, 1]
+            
+            # Run the classification_report_image function
+            cls.classification_report_image(
+                y_train, y_test,
+                y_train_preds, y_train_preds,  # Using same predictions for LR and RF for simplicity
+                y_test_preds, y_test_preds,
+                y_test_probs, y_test_probs
+            )
+            logging.info("Testing classification_report_image: SUCCESS - Function executed without errors")
+        except Exception as err:
+            logging.error(f"Testing classification_report_image: Failed to execute - {str(err)}")
+            raise err
+
+        try:
+            expected_files = [
+                './image/logistic_classification_report.png',
+                './image/random_forest_classification_report.png',
+                './image/roc_curve.png'
+            ]
+            for file_path in expected_files:
+                self.assertTrue(os.path.isfile(file_path), f"File {file_path} not found")
+            logging.info("Testing classification_report_image: All expected plot files created successfully")
+        except AssertionError as err:
+            logging.error(f"Testing classification_report_image: Plot file check failed - {str(err)}")
+            raise err
+
+        # Test case: Invalid input (mismatched lengths)
+        try:
+            y_train_invalid = y_train.iloc[:-1]  # Shorten y_train
+            with self.assertRaises(ValueError) as context:
+                cls.classification_report_image(
+                    y_train_invalid, y_test,
+                    y_train_preds, y_train_preds,
+                    y_test_preds, y_test_preds,
+                    y_test_probs, y_test_probs
+                )
+            self.assertTrue(
+                "Input contains NaN, infinity or a value too large" in str(context.exception) or
+                "inconsistent numbers of samples" in str(context.exception),
+                f"Expected ValueError for mismatched lengths, got: {str(context.exception)}"
+            )
+            logging.info("Testing classification_report_image: Correctly raised ValueError for invalid input")
+        except AssertionError as err:
+            logging.error(f"Testing classification_report_image: Failed to raise ValueError for invalid input - {str(err)}")
+            raise err
+
+    def test_feature_importance_plot(self):
+        """Test the feature_importance_plot function."""
+        try:
+            # Prepare data for testing
+            df_eda = self.df.copy()
+            if 'Churn' in df_eda.columns:
+                df_eda = df_eda.drop('Churn', axis=1)
+            cls.perform_eda(df_eda)
+            cat_columns = [
+                'Gender', 'Education_Level', 'Marital_Status',
+                'Income_Category', 'Card_Category'
+            ]
+            df_encoded = cls.encoder_helper(df_eda, cat_columns, response='Churn')
+            X_train, X_test, y_train, y_test, scaler = cls.perform_feature_engineering(df_encoded, response='Churn')
+            
+            # Train a simple RandomForest model
+            model = RandomForestClassifier(random_state=42)
+            model.fit(X_train, y_train)
+            
+            # Run the feature_importance_plot function
+            cls.feature_importance_plot(model, X_test, './image/feature_importance_test.png')
+            logging.info("Testing feature_importance_plot: SUCCESS - Function executed without errors")
+        except Exception as err:
+            logging.error(f"Testing feature_importance_plot: Failed to execute - {str(err)}")
+            raise err
+
+        try:
+            expected_files = [
+                './image/feature_importance_test.png',
+                './image/shap_summary_plot.png'
+            ]
+            for file_path in expected_files:
+                self.assertTrue(os.path.isfile(file_path), f"File {file_path} not found")
+            logging.info("Testing feature_importance_plot: All expected plot files created successfully")
+        except AssertionError as err:
+            logging.error(f"Testing feature_importance_plot: Plot file check failed - {str(err)}")
+            raise err
+
+        # Test case: Invalid model (no feature_importances_)
+        try:
+            from sklearn.linear_model import LinearRegression
+            invalid_model = LinearRegression()
+            invalid_model.fit(X_train, y_train)
+            with self.assertRaises(AttributeError) as context:
+                cls.feature_importance_plot(invalid_model, X_test, './image/feature_importance_invalid.png')
+            self.assertTrue(
+                'feature_importances_' in str(context.exception),
+                f"Expected AttributeError for missing feature_importances_, got: {str(context.exception)}"
+            )
+            logging.info("Testing feature_importance_plot: Correctly raised AttributeError for invalid model")
+        except AssertionError as err:
+            logging.error(f"Testing feature_importance_plot: Failed to raise AttributeError for invalid model - {str(err)}")
             raise err
 
 if __name__ == '__main__':
