@@ -152,9 +152,9 @@ def encoder_helper(
             raise ValueError(f"Response column '{response}' not found in DataFrame")
 
         # Validate categorical columns
-        for col in category_list:
-            if col not in data_frame.columns:
-                raise ValueError(f"Categorical column '{col}' not found in DataFrame")
+        missing_cols = [col for col in category_list if col not in data_frame.columns]
+        if missing_cols:
+            raise ValueError(f"Categorical columns not found in DataFrame: {missing_cols}")
 
         result_df = data_frame.copy()
         for col in category_list:
@@ -197,6 +197,11 @@ def perform_feature_engineering(
             'Income_Category_Churn', 'Card_Category_Churn'
         ]
 
+        # Validate required columns
+        missing_cols = [col for col in keep_cols if col not in data_frame.columns]
+        if missing_cols:
+            raise KeyError(f"Missing required columns: {missing_cols}")
+
         X = data_frame[keep_cols].copy()
         y = data_frame[response]
 
@@ -213,6 +218,8 @@ def perform_feature_engineering(
 
         return X_train, X_test, y_train, y_test, scaler
 
+    except KeyError as err:
+        raise KeyError(f"Feature engineering failed: {str(err)}") from err
     except Exception as err:
         raise Exception(f"Feature engineering failed: {str(err)}") from err
 
