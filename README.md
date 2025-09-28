@@ -1,173 +1,142 @@
 # Churn Prediction Pipeline
 
 ## Overview
+This project implements a machine learning pipeline to predict customer churn using bank customer data. It processes a dataset to create a 'Churn' column, performs exploratory data analysis (EDA) to generate visualizations, encodes categorical features, trains Logistic Regression and Random Forest models, and produces evaluation metrics and plots, including feature importance and SHAP summary plots. Outputs are saved as images (`./image/`) and model files (`./models/`).
 
-This project implements a machine learning pipeline to predict customer churn using a dataset of bank customer information. The pipeline includes data import, exploratory data analysis (EDA), feature engineering, model training, and evaluation. It uses Logistic Regression and Random Forest models to predict churn and generates visualizations for analysis, including feature importance and SHAP summary plots. A comprehensive test suite ensures the reliability of the pipeline.
+The pipeline is implemented in `churn_library.py`, and unit tests are provided in `churn_script_logging_and_tests.py`. Test execution logs are saved to `./logs/churn_test_script.log`.
 
-The main script, `churn_library.py`, contains the core functionality, while `churn_script_logging_and_tests.py` provides unit tests to validate each function. Logging captures detailed information about pipeline execution and test results in a log file for traceability.
+## Project Structure
+- `churn_library.py`: Main script containing the pipeline functions and execution logic.
+- `churn_script_logging_and_tests.py`: Unit tests for validating pipeline functions.
+- `data/`: Directory containing the input dataset (`bank_data.csv`).
+- `image/`: Directory for EDA and model evaluation plots (e.g., `churn_histogram.png`, `roc_curve.png`).
+- `models/`: Directory for saved models and scaler (e.g., `rfc_model.pkl`, `logistic_model.pkl`, `scaler.pkl`).
+- `logs/`: Directory for test logs (`churn_test_script.log`).
+- `.env`: Optional environment file for configuring data path and pipeline options.
 
-## Prerequisites
+## Dependencies
+- Python 3.8+
+- Libraries: `pandas`, `numpy`, `matplotlib`, `seaborn`, `scikit-learn`, `shap`, `joblib`, `python-dotenv`
+- Install dependencies using:
+  ```bash
+  pip install -r requirements.txt
 
-- **Python Version**: Python 3.6 or higher
-- **Dependencies**: Install required packages using the provided `requirements.txt`:
-  ```plaintext
-  pandas
-  numpy
-  matplotlib
-  seaborn
-  scikit-learn
-  joblib
-  shap
-  python-dotenv
-  ```
+  Sample requirements.txt:
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+scikit-learn>=1.2.0
+shap>=0.41.0
+joblib>=1.2.0
+python-dotenv>=1.0.0
 
-## Setup
+Setup
 
-1. **Clone the Repository**:
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+Clone the Repository:
+git clone <repository-url>
+cd <repository-directory>
 
-2. **Install Dependencies**:
-   Install the required Python packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
 
-3. **Prepare Data**:
-   - Ensure the dataset file (`bank_data.csv`) is located in the `./data` directory.
-   - Alternatively, set the `BANK_DATA_PATH` environment variable to point to your dataset:
-     ```bash
-     export BANK_DATA_PATH=/path/to/your/bank_data.csv
-     ```
+Install Dependencies:
+pip install -r requirements.txt
 
-4. **Directory Structure**:
-   The pipeline creates the following directories if they do not exist:
-   - `./image`: Stores EDA and model evaluation plots.
-   - `./models`: Stores trained model files.
-   - `./logs`: Stores log files for pipeline execution and tests.
 
-## Usage
+Prepare the Dataset:
 
-### Running the Pipeline
+Place the dataset (bank_data.csv) in the ./data/ directory.
+Alternatively, configure the dataset path in a .env file:BANK_DATA_PATH=./data/bank_data.csv
+RUN_FEATURE_ENGINEERING=true
 
-To execute the full churn prediction pipeline (data import, EDA, feature engineering, and model training), run:
-```bash
+
+
+
+Create Output Directories:
+
+The pipeline automatically creates ./image/ and ./models/ directories if they don’t exist.
+For tests, ensure the ./logs/ directory is writable:mkdir -p ./logs
+chmod u+w ./logs
+
+
+
+
+
+Running the Pipeline
+To execute the churn prediction pipeline:
 python churn_library.py
-```
 
-This will:
-- Load the dataset from `BANK_DATA_PATH` (default: `./data/bank_data.csv`).
-- Perform EDA and save plots to `./image` (e.g., `churn_histogram.png`, `correlation_heatmap.png`).
-- Encode categorical features and create churn proportion columns.
-- Perform feature engineering to prepare training and testing datasets.
-- Train Logistic Regression and Random Forest models.
-- Save trained models to `./models` (e.g., `rfc_model.pkl`, `logistic_model.pkl`, `scaler.pkl`).
-- Generate evaluation plots, including classification reports, ROC curves, feature importance, and SHAP summary plots, saved to `./image`.
 
-To skip feature engineering and model training (e.g., for EDA only), set the `RUN_FEATURE_ENGINEERING` environment variable to `false`:
-```bash
-export RUN_FEATURE_ENGINEERING=false
-python churn_library.py
-```
+Inputs:
+Dataset: Specified via BANK_DATA_PATH in .env (default: ./data/bank_data.csv).
+Feature Engineering: Controlled via RUN_FEATURE_ENGINEERING in .env (default: true).
 
-Logs for the pipeline execution are saved to `./logs/churn_script.log`.
 
-### Running Tests
+Outputs:
+EDA plots: ./image/churn_histogram.png, ./image/customer_age_histogram.png, ./image/marital_status_bar.png, ./image/total_trans_ct_histogram.png, ./image/correlation_heatmap.png
+Model evaluation plots: ./image/logistic_classification_report.png, ./image/random_forest_classification_report.png, ./image/roc_curve.png, ./image/feature_importance.png, ./image/shap_summary_plot.png
+Models: ./models/rfc_model.pkl, ./models/logistic_model.pkl, ./models/scaler.pkl
 
-To validate the pipeline functions, run the test script:
-```bash
+
+
+If RUN_FEATURE_ENGINEERING=false in .env, the pipeline skips feature engineering and model training, producing only EDA outputs.
+Running Tests
+To run unit tests for the pipeline:
 python churn_script_logging_and_tests.py
-```
-or
-```bash
-ipython churn_script_logging_and_tests.py
-```
 
-This will execute unit tests for all functions in `churn_library.py`:
-- `import_data`
-- `perform_eda`
-- `encoder_helper`
-- `perform_feature_engineering`
-- `train_models`
-- `classification_report_image`
-- `feature_importance_plot`
 
-The test script validates:
-- Successful execution with valid inputs.
-- Error handling for invalid inputs (e.g., missing files, invalid columns).
-- Correct output formats (e.g., DataFrame structures, file generation).
-- Presence of expected output files (e.g., model files, plots).
+Logs: Test execution details are saved to ./logs/churn_test_script.log. View them with:cat ./logs/churn_test_script.log
 
-Test results and detailed logs are saved to `./logs/churn_script.log`. To view the logs:
-```bash
-cat ./logs/churn_script.log
-```
 
-To run individual test cases, specify the test method:
-```bash
-python -m unittest churn_script_logging_and_tests.TestEDAPipeline.test_import
-```
+Tests Cover:
+Data import (import_data)
+EDA (perform_eda)
+Categorical encoding (encoder_helper)
+Feature engineering (perform_feature_engineering)
+Model training (train_models)
+Classification report generation (classification_report_image)
+Feature importance plotting (feature_importance_plot)
 
-### Log File
 
-The log file (`./logs/churn_script.log`) contains:
-- **Info Messages**: Indicate successful execution of pipeline steps or tests, including DataFrame properties, created files, and model parameters (e.g., "Testing import_data: SUCCESS").
-- **Error Messages**: Detail any failures with specific error messages and stack traces for traceability (e.g., "Testing perform_eda: Failed to execute - Churn column already exists in DataFrame").
 
-## Pipeline Details
+Environment Variables
+Configure the pipeline using a .env file in the project root:
+BANK_DATA_PATH=./data/bank_data.csv
+RUN_FEATURE_ENGINEERING=true
 
-### Functions in `churn_library.py`
 
-1. **import_data(pth)**: Loads a CSV file into a pandas DataFrame.
-2. **perform_eda(df)**: Performs EDA, creates a Churn column, and generates visualizations (e.g., histograms, correlation heatmap).
-3. **encoder_helper(df, category_lst, response)**: Encodes categorical columns by calculating churn proportions.
-4. **perform_feature_engineering(df, response)**: Prepares features for modeling, including scaling and train-test split.
-5. **train_models(X_train, X_test, y_train, y_test, scaler)**: Trains Logistic Regression and Random Forest models, saves models, and generates evaluation plots.
-6. **classification_report_image(y_train, y_test, ...)**: Generates classification reports and ROC curves for model evaluation.
-7. **feature_importance_plot(model, X_data, output_pth)**: Creates feature importance and SHAP summary plots for the Random Forest model.
+BANK_DATA_PATH: Path to the input CSV file (default: ./data/bank_data.csv).
+RUN_FEATURE_ENGINEERING: Set to true to run feature engineering and model training, or false to run only EDA (default: true).
 
-### Output Files
+Notes
 
-- **EDA Plots** (in `./image`):
-  - `churn_histogram.png`
-  - `customer_age_histogram.png`
-  - `marital_status_bar.png`
-  - `total_trans_ct_histogram.png`
-  - `correlation_heatmap.png`
-- **Model Files** (in `./models`):
-  - `rfc_model.pkl` (Random Forest)
-  - `logistic_model.pkl` (Logistic Regression)
-  - `scaler.pkl` (StandardScaler)
-- **Evaluation Plots** (in `./image`):
-  - `logistic_classification_report.png`
-  - `random_forest_classification_report.png`
-  - `roc_curve.png`
-  - `feature_importance.png`
-  - `shap_summary_plot.png`
-- **Log File** (in `./logs`):
-  - `churn_script.log`
+Ensure the dataset (bank_data.csv) has the expected columns (e.g., Attrition_Flag, Customer_Age, Gender, etc.) to avoid errors.
+The pipeline assumes a binary churn classification task, with Attrition_Flag mapped to Churn (0 for "Existing Customer", 1 for "Attrited Customer").
+Test logs (./logs/churn_test_script.log) provide detailed debugging information for test failures.
+No pipeline execution logs are generated, as per the project configuration.
 
-## Testing Details
+Troubleshooting
 
-The test script (`churn_script_logging_and_tests.py`) includes unit tests for all functions in `churn_library.py`. Each test method:
-- Verifies successful execution with valid inputs.
-- Checks error handling for invalid inputs.
-- Validates output formats and file generation.
-- Logs detailed success and error messages to `./logs/churn_script.log`.
+Missing Dataset: Verify bank_data.csv exists at the specified BANK_DATA_PATH.ls ./data/bank_data.csv
 
-## Troubleshooting
 
-- **FileNotFoundError**: Ensure `bank_data.csv` exists at the specified `BANK_DATA_PATH`.
-- **Missing Dependencies**: Verify all packages in `requirements.txt` are installed.
-- **Log File Issues**: Check write permissions for the `./logs` directory.
-- **Test Failures**: Review `./logs/churn_script.log` for detailed error messages.
+Permission Issues: Ensure write access to ./logs/, ./image/, and ./models/:chmod -R u+w ./logs ./image ./models
 
-## Contributing
 
-Contributions are welcome! Please submit pull requests or open issues on the repository for bug reports or feature requests.
+Test Failures: Check ./logs/churn_test_script.log for details on failed tests.
+Dependency Errors: Reinstall dependencies:pip install -r requirements.txt
 
-## License
 
+
+Contributing
+To contribute:
+
+Fork the repository.
+Create a feature branch (git checkout -b feature/your-feature).
+Commit changes (git commit -m "Add your feature").
+Push to the branch (git push origin feature/your-feature).
+Open a pull request.
+
+License
 This project is licensed under the MIT License.
+
+Last updated: 10:40 AM SAST, Sunday, September 28, 2025```

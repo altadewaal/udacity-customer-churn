@@ -1,3 +1,11 @@
+"""
+Unit Tests for Churn Prediction Pipeline
+
+This module provides a comprehensive test suite for the churn prediction pipeline implemented in churn_library.py. It includes unit tests for all functions to validate their functionality, error handling, and output correctness. The tests cover data import, exploratory data analysis (EDA), categorical encoding, feature engineering, model training, classification report generation, and feature importance plotting. Test results and detailed logs are saved to './logs/churn_test_script.log' for traceability.
+
+Classes:
+- TestEDAPipeline: Contains test methods for each function in churn_library.py, including input validation, output checks, and error handling.
+"""
 import unittest
 import logging
 import os
@@ -5,6 +13,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
+from sklearn.preprocessing import StandardScaler
 from dotenv import load_dotenv
 import churn_library as cls
 
@@ -17,7 +26,7 @@ DATA_FILE_PATH = os.environ.get('BANK_DATA_PATH', './data/bank_data.csv')
 # Create logs directory and configure logging
 os.makedirs('./logs', exist_ok=True)
 logging.basicConfig(
-    filename='./logs/churn_script.log',
+    filename='./logs/churn_library_test.log',
     level=logging.INFO,
     filemode='w',
     format='%(name)s - %(levelname)s - %(message)s'
@@ -99,7 +108,7 @@ class TestEDAPipeline(unittest.TestCase):
                 'marital_status_bar.png',
                 'total_trans_ct_histogram.png',
                 'correlation_heatmap.png'
-                ]
+            ]
             # Check if all expected plot files exist in the image folder
             for plot in expected_plots:
                 plot_path = os.path.join('image', plot)
@@ -112,9 +121,7 @@ class TestEDAPipeline(unittest.TestCase):
         # Test case: Ensure perform_eda raises error if Churn column exists
         try:
             # Create a copy with Churn column
-           
-
- df_with_churn = self.df.copy()
+            df_with_churn = self.df.copy()
             df_with_churn['Churn'] = 1  # Dummy Churn column
             with self.assertRaises(ValueError) as context:
                 cls.perform_eda(df_with_churn)
@@ -376,7 +383,7 @@ class TestEDAPipeline(unittest.TestCase):
                 './models/rfc_model.pkl',
                 './models/logistic_model.pkl',
                 './models/scaler.pkl',
-                './image/log logistic_classification_report.png',
+                './image/logistic_classification_report.png',
                 './image/random_forest_classification_report.png',
                 './image/roc_curve.png',
                 './image/feature_importance.png',
@@ -436,19 +443,18 @@ class TestEDAPipeline(unittest.TestCase):
             logging.error(f"Testing classification_report_image: Plot file check failed - {str(err)}")
             raise err
 
-        # Test case: Invalid input (mismatched lengths)
+        # Test case: Invalid input (mismatched lengths for probability arrays)
         try:
-            y_train_invalid = y_train.iloc[:-1]  # Shorten y_train
+            y_test_probs_invalid = y_test_probs[:-1]  # Shorten y_test_probs by one
             with self.assertRaises(ValueError) as context:
                 cls.classification_report_image(
-                    y_train_invalid, y_test,
+                    y_train, y_test,
                     y_train_preds, y_train_preds,
                     y_test_preds, y_test_preds,
-                    y_test_probs, y_test_probs
+                    y_test_probs_invalid, y_test_probs
                 )
             self.assertTrue(
-                "Input contains NaN, infinity or a value too large" in str(context.exception) or
-                "inconsistent numbers of samples" in str(context.exception),
+                "Mismatched lengths between y_test and probability arrays" in str(context.exception),
                 f"Expected ValueError for mismatched lengths, got: {str(context.exception)}"
             )
             logging.info("Testing classification_report_image: Correctly raised ValueError for invalid input")
